@@ -63,7 +63,6 @@ if __name__ == "__main__":
 
     dist_print('start testing...')
     assert cfg.backbone in ['18','34','50','101','152','50next','101next','50wide','101wide']
-
     if cfg.dataset == 'CULane':
         cls_num_per_lane = 18
     elif cfg.dataset == 'Tusimple':
@@ -89,6 +88,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
+
     if cfg.dataset == 'CULane':
         splits = ['test0_normal.txt', 'test1_crowd.txt', 'test2_hlight.txt', 'test3_shadow.txt', 'test4_noline.txt', 'test5_arrow.txt', 'test6_curve.txt', 'test7_cross.txt', 'test8_night.txt']
         datasets = [LaneTestDataset(cfg.data_root,os.path.join(cfg.data_root, 'list/test_split/'+split),img_transform = img_transforms, crop_size = cfg.train_height) for split in splits]
@@ -99,6 +99,7 @@ if __name__ == "__main__":
         img_w, img_h = 1280, 720
     else:
         raise NotImplementedError
+    
     for split, dataset in zip(splits, datasets):
         loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle = False, num_workers=1)
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
