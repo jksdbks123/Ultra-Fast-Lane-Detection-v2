@@ -116,7 +116,7 @@ def get_lane_detector(config_file_path,ckpt_path,device):
             transforms.ToTensor(),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
-    return net_lane,img_transforms_lane
+    return net_lane,img_transforms_lane,cfg
 
 
 from skimage import exposure
@@ -141,3 +141,59 @@ def get_rumble_strip_classifier(ckpt_path,device):
     transforms.Normalize(mean=[0.25257042,0.24238083,0.22564004], std=[0.28864914,0.27758299,0.25838134]),
 ])
     return model_patch,transform_patch
+
+def get_rumble_strip_label(img_path,model_patch,net_lane,transform_patch,img_transforms_lane,cfg):
+    img = Image.open(img_path)
+    img_w, img_h = img.size
+    
+    # Convert the image to tensor
+    img = img_transforms_lane(img)
+    img = img[:,-cfg.train_height:,:]
+    img = img.unsqueeze(0)
+    # Move the image to GPU if available
+    img = img.to(device)
+    # forward
+    with torch.no_grad():
+        pred = net_lane(img)
+    coords = pred2coords(pred, cfg.row_anchor, cfg.col_anchor, original_image_width = img_w, original_image_height = img_h)
+    vis = cv2.imread(img_path)
+    patches,valid_coords = extract_lane_patch(coords,vis)
+    rumble_strip_labels = []
+    for patch in patches:
+        patch = Image.fromarray(patch)
+        # resize the patch to 256x256
+        patch = transform_patch(patch)
+        patch = patch.unsqueeze(0)
+        patch = patch.to(device)
+        model_patch.eval()
+        with torch.no_grad():
+            outputs = model_patch(patch)
+            _, predicted = torch.max(outputs, 1)
+        rumble_strip_labels.append(predicted.item())
+
+    return rumble_strip_labels,valid_coords,vis
+
+# draw the lane lines
+def get_rumble_strip_indicator_file(rumble_strip_labels,valid_lane_coords,raw_GSV):
+    labeled_GSV = raw_GSV.copy()
+    for i,(lane_coords,rumble_strip_label) in enumerate(zip(valid_lane_coords,rumble_strip_labels)):
+        
+        # draw the lane line using cv2.line, green for rumble strip label 1 and red for rumble strip label 0
+        if rumble_strip_label == 1:
+            color = (0,255,0)
+        else:
+            color = (255,0,0)
+        for j in range(len(lane_coords)-1):
+            cv2.line(labeled_GSV,(int(lane_coords[j][0]),int(lane_coords[j][1])),(int(lane_coords[j+1][0]),int(lane_coords[j+1][1])),color,2)
+
+    start_lane_point_x = []
+    start_lane_point_y = []
+    end_lane_point_x = []
+    end_lane_point_y = []
+    for lane in valid_lane_coords:
+        start_lane_point_x.append(lane[0][0])
+        start_lane_point_y.append(lane[0][1])
+        end_lane_point_x.append(lane[-1][0])
+        end_lane_point_y.append(lane[-1][1])
+    df = pd.DataFrame({'start_lane_point_x':start_lane_point_x,'start_lane_point_y':start_lane_point_y,'end_lane_point_x':end_lane_point_x,'end_lane_point_y':end_lane_point_y,'rumble_strip_labels':rumble_strip_labels})
+    return df,labeled_GSV
