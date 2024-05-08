@@ -88,3 +88,4 @@ def extract_lane_patch(coords,vis,target_img_folder,route_img_name,img_h = 640,i
         lane_patch = lane_patch[xmin:xmax,ymin:ymax]
         # save the lane patch
         cv2.imwrite(os.path.join(target_img_folder,f'{route_img_name}_{i}.jpg'),lane_patch)
+
