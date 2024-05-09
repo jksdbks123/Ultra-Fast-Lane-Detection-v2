@@ -74,6 +74,9 @@ def generate_rumble_strip_layers(GSV_save_path,output_path,model_patch,net_lane,
                                                                           transform_patch,img_transforms_lane,cfg)
             if 1 in rumble_strip_labels:
                 route_rumble_strip_labels.append(1)
+            else:
+                route_rumble_strip_labels.append(0)
+
             df,labeled_GSV = get_rumble_strip_indicator_file(rumble_strip_labels,valid_lane_coords,raw_GSV)
             # save the rumble strip indicators as a csv file to the Indicator_Folder_route
             df.to_csv(os.path.join(Indicator_Folder_route,f'{file[:-5]}.csv'),index=False)
@@ -87,7 +90,7 @@ def generate_rumble_strip_layers(GSV_save_path,output_path,model_patch,net_lane,
         # delete the 'copyright' column
         metas = metas.drop(columns=['copyright'])
         # add a column 'rumble_strip_labels' to the metas
-        metas['rumble_strip_labels'] = route_rumble_strip_labels
+        metas['RS_binary'] = route_rumble_strip_labels
         # save the metas as a point layer
         metas = geopandas.GeoDataFrame(metas,geometry=geopandas.points_from_xy(lngs,lats))
         metas.crs = 'epsg:4326'
