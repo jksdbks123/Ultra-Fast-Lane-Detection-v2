@@ -60,7 +60,10 @@ def generate_rumble_strip_layers(GSV_save_path,output_path,model_patch,net_lane,
 
             if not os.path.exists(Img_path):
                 continue
-            meta['Img_path'] = Img_path
+
+            # only keep the route name and the image name in the meta dictionary
+            Img_path_ = '\\' + folder + '\\' + file[:-5] + '.jpg'
+            meta['Img_path'] = Img_path_
             meta['RouteID'] = folder
             # get the location, save it as a column in the point layer
             lngs.append(meta['location']['lng'])
